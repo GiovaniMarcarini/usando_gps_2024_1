@@ -12,6 +12,9 @@ class HomePage extends StatefulWidget{
 }
 
 class _HomePageState extends State<HomePage>{
+
+  final _linhas = <String>[];
+
   @override
   Widget build(BuildContext context){
     return Scaffold(
@@ -22,13 +25,24 @@ class _HomePageState extends State<HomePage>{
     );
   }
 
-  Widget _criarBody() => const Padding(
-      padding: EdgeInsets.all(10),
+  Widget _criarBody() => Padding(
+      padding: const EdgeInsets.all(10),
     child: Column(
       children: [
         ElevatedButton(
             onPressed: _obterUltimaLocalizacaoConhecida,
-            child: Text('Obter ultima localização conhecida')
+            child: const Text('Obter ultima localização conhecida')
+        ),
+        const Divider(),
+        Expanded(
+            child: ListView.builder(
+              shrinkWrap: true,
+                itemCount: _linhas.length,
+                itemBuilder:(_, index) => Padding(
+                  padding: const EdgeInsets.all(5),
+                  child: Text(_linhas[index]),
+                ),
+            ),
         ),
       ],
     ),
@@ -39,8 +53,15 @@ class _HomePageState extends State<HomePage>{
     if (!permissoesPermitidas){
       return;
     }
-
-
+    Position? position = await Geolocator.getLastKnownPosition();
+    setState(() {
+      if( position == null){
+        _linhas.add('Nenhuma localização encontrada!');
+      }else{
+        _linhas.add('Latitude: ${position.latitude}  |'
+            '  Logetude: ${position.longitude}');
+      }
+    });
   }
 
   Future<bool> _permissoesPermitidas() async{
@@ -58,7 +79,7 @@ class _HomePageState extends State<HomePage>{
     if (permissao == LocationPermission.deniedForever){
       await _mostrarDialogMensagem(
         'Para utilizar esse recurso, você deverá acessar as configurações'
-            'do app e permitir a utilização do serviço de localização'
+            ' do app e permitir a utilização do serviço de localização'
       );
       Geolocator.openAppSettings();
       return false;

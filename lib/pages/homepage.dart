@@ -1,4 +1,6 @@
 
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
@@ -14,11 +16,17 @@ class HomePage extends StatefulWidget{
 class _HomePageState extends State<HomePage>{
 
   final _linhas = <String>[];
+  StreamSubscription<Position>? _subscription;
+  Position? _ultimaLocalizacaoObtida;
+  double _distanciaPercorrida = 0;
+
+  bool get _monitorarLocalizacao => _subscription != null;
 
   @override
   Widget build(BuildContext context){
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         title: const Text('Usando GPS'),
       ),
       body: _criarBody() ,
@@ -32,6 +40,18 @@ class _HomePageState extends State<HomePage>{
         ElevatedButton(
             onPressed: _obterUltimaLocalizacaoConhecida,
             child: const Text('Obter ultima localização conhecida')
+        ),
+        ElevatedButton(
+            onPressed: _obterLocalizacaoAtual,
+            child: const Text('Obter localização atual')
+        ),
+        ElevatedButton(
+            onPressed: _obterLocalizacaoAtual,
+            child: const Text('Obter localização atual')
+        ),
+        ElevatedButton(
+            onPressed: _limparLog,
+            child: const Text('Limpar Log')
         ),
         const Divider(),
         Expanded(
@@ -64,6 +84,29 @@ class _HomePageState extends State<HomePage>{
     });
   }
 
+  void _obterLocalizacaoAtual() async {
+    bool servicoHabilitado = await _servicoHabilitado();
+    if(!servicoHabilitado){
+      return;
+    }
+
+    bool permissoesPermitidas = await _permissoesPermitidas();
+    if (!permissoesPermitidas){
+      return;
+    }
+
+    Position position = await Geolocator.getCurrentPosition();
+    setState(() {
+      if( position == null){
+        _linhas.add('Nenhuma localização encontrada!');
+      }else{
+        _linhas.add('Latitude: ${position.latitude}  |'
+            '  Logetude: ${position.longitude}');
+      }
+    });
+
+  }
+
   Future<bool> _permissoesPermitidas() async{
     LocationPermission permissao = await Geolocator.checkPermission();
 
@@ -82,6 +125,19 @@ class _HomePageState extends State<HomePage>{
             ' do app e permitir a utilização do serviço de localização'
       );
       Geolocator.openAppSettings();
+      return false;
+    }
+    return true;
+  }
+
+  Future<bool> _servicoHabilitado() async{
+    bool servicoHabilitado = await Geolocator.isLocationServiceEnabled();
+
+    if (!servicoHabilitado){
+      await _mostrarDialogMensagem('Para utilizar esse serviço, você deverá '
+          'habilitar o serviço de localização do dispositivo.');
+
+      Geolocator.openLocationSettings();
       return false;
     }
     return true;
@@ -109,4 +165,9 @@ class _HomePageState extends State<HomePage>{
     );
   }
 
+  void _limparLog(){
+  setState(() {
+    _linhas.clear();
+  });
+  }
 }

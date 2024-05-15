@@ -20,7 +20,7 @@ class _HomePageState extends State<HomePage>{
   Position? _ultimaLocalizacaoObtida;
   double _distanciaPercorrida = 0;
 
-  bool get _monitorarLocalizacao => _subscription != null;
+  bool get _monitorandoLocalizacao => _subscription != null;
 
   @override
   Widget build(BuildContext context){
@@ -46,8 +46,10 @@ class _HomePageState extends State<HomePage>{
             child: const Text('Obter localização atual')
         ),
         ElevatedButton(
-            onPressed: _obterLocalizacaoAtual,
-            child: const Text('Obter localização atual')
+            onPressed: _monitorandoLocalizacao ? _pararMonitoramento :
+            _monitorarLocalizacao,
+            child: Text(_monitorandoLocalizacao ? 'Parar monitoramento' :
+            'Monitorar localozação'),
         ),
         ElevatedButton(
             onPressed: _limparLog,
@@ -79,7 +81,7 @@ class _HomePageState extends State<HomePage>{
         _linhas.add('Nenhuma localização encontrada!');
       }else{
         _linhas.add('Latitude: ${position.latitude}  |'
-            '  Logetude: ${position.longitude}');
+            '  Longetude: ${position.longitude}');
       }
     });
   }
@@ -101,10 +103,50 @@ class _HomePageState extends State<HomePage>{
         _linhas.add('Nenhuma localização encontrada!');
       }else{
         _linhas.add('Latitude: ${position.latitude}  |'
-            '  Logetude: ${position.longitude}');
+            '  Longetude: ${position.longitude}');
       }
     });
 
+  }
+
+  void _monitorarLocalizacao(){
+    const LocationSettings locationSettings = LocationSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 100
+    );
+
+    _subscription = Geolocator.getPositionStream(
+      locationSettings: locationSettings).listen((Position position) {
+      setState(() {
+        if( position == null){
+          _linhas.add('Nenhuma localização encontrada!');
+        }else{
+          _linhas.add('Latitude: ${position.latitude}  |'
+              '  Longetude: ${position.longitude}');
+        }
+      });
+      if (_ultimaLocalizacaoObtida != null){
+        final distancia = Geolocator.distanceBetween(
+            _ultimaLocalizacaoObtida!.latitude,
+            _ultimaLocalizacaoObtida!.longitude,
+            position.latitude,
+            position.longitude );
+
+        _distanciaPercorrida += distancia;
+
+        _linhas.add('Distancia percorrida: ${_distanciaPercorrida.toInt()}M');
+      }
+      _ultimaLocalizacaoObtida = position;
+    });
+  }
+
+  void _pararMonitoramento(){
+    _subscription?.cancel();
+    setState(() {
+      _subscription = null;
+      _distanciaPercorrida = 0;
+      _ultimaLocalizacaoObtida = null;
+    });
   }
 
   Future<bool> _permissoesPermitidas() async{
